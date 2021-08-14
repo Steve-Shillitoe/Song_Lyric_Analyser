@@ -3,11 +3,15 @@ from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, \
                         QPushButton, QVBoxLayout, QWidget, \
                         QGridLayout, QLabel, QLineEdit, QPushButton, \
-                        QAbstractItemView, QListWidget, QListWidgetItem
+                        QAbstractItemView, QListWidget, QListWidgetItem, \
+                        QMessageBox, QPlainTextEdit, QScrollBar
 
 import musicbrainzngs
+import lyricsgenius
 import webbrowser
 
+
+MUSIC_GENIUS_ACCESS_TOKEN = "Xggm2iesVVTObjSTWDUIVfWoyGhftueOxOowgkCR5LKRyYS8Ml9K8oam4zBM3sR7"
 # Subclass QMainWindow to customize your application's main window
 
 class MainWindow(QMainWindow):
@@ -15,13 +19,13 @@ class MainWindow(QMainWindow):
       super().__init__()
       # Initialize user agent to DB
       musicbrainzngs.set_useragent(
-        "MusicAnalyser", "1.0", contact="s.shillitoe1@ntlworld.com")
-      self.setWindowTitle("Music Analyser")
+        "Song_Lyric_Analyser", "1.0", contact="s.shillitoe1@ntlworld.com")
+      self.setWindowTitle("Song Lyric Analyser")
       self.setWindowFlags(Qt.CustomizeWindowHint | 
                                           Qt.WindowCloseButtonHint | 
                                           Qt.WindowMinimizeButtonHint |
                                           Qt.WindowMaximizeButtonHint)
-      #self.showFullScreen()
+     
       self.mainLayout = QGridLayout()
       self.widget = QWidget()
       self.widget.setLayout(self.mainLayout)
@@ -44,9 +48,26 @@ class MainWindow(QMainWindow):
       self.artist_list.itemClicked.connect(lambda item: self.song_search(item))
 
       self.song_list = QListWidget()
+      self.song_list.sortItems(Qt.AscendingOrder)
       self.song_list.setSelectionMode(QAbstractItemView.SingleSelection)
-      #self.song_list.itemClicked.connect(lambda item: self.getLyrics(item))
+      self.song_list.itemClicked.connect(lambda item: self.lyric_search(item))
       self.mainLayout.addWidget(self.song_list, 3,1)
+
+      self.lyrics = QPlainTextEdit()
+      scroll_bar = QScrollBar()
+      # setting style sheet to the scroll bar
+      scroll_bar.setStyleSheet("background : lightgreen;")
+      self.lyrics.setVerticalScrollBar(scroll_bar)
+      self.lyrics_label = QLabel("Lyrics")
+      self.lyrics_label.setWordWrap(True)
+      self.mainLayout.addWidget(self.lyrics_label, 4,0)
+      self.mainLayout.addWidget(self.lyrics, 4,1)
+
+      self.selected_artist = ""
+      self.selected_song = ""
+      self.music_genius = lyricsgenius.Genius(MUSIC_GENIUS_ACCESS_TOKEN)
+      self.music_genius.remove_section_headers = True # Remove section headers (e.g. [Chorus]) from lyrics when searching
+      self.music_genius.skip_non_songs = True
 
 
     # Search for Artist
@@ -54,15 +75,22 @@ class MainWindow(QMainWindow):
       self.song_list.clear()
       self.artist_list.clear()
       search_string = self.artist_name.text()
-      artist_result = musicbrainzngs.search_artists(
-            artist=search_string, limit=5, strict=True)
-      for artist in artist_result["artist-list"]:
-        item = QListWidgetItem(artist["name"])
-        #item.setToolTip("Tick the check box to create a subset of images based on {}".format(imageType))
-        #item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-        #item.setCheckState(Qt.Unchecked)
-        self.artist_list.addItem(item)
-             
+
+      if search_string:
+          artist_result = musicbrainzngs.search_artists(
+                artist=search_string, limit=5, strict=True)
+          
+          if int(artist_result["artist-count"])> 0 :
+                for artist in artist_result["artist-list"]:
+                    item = QListWidgetItem(artist["name"])
+                    self.artist_list.addItem(item)
+          else:
+                QMessageBox().information(self, 
+                                          "Artist Search", 
+                                          "No songs were found for {}.".format(search_string))  
+          
+      else:
+          QMessageBox().critical(self, "Artist Name", "Please enter the name of the artist.") 
           
         # Update Results
         #update_artist(artist_result)
@@ -79,12 +107,24 @@ class MainWindow(QMainWindow):
     #song_result = musicbrainzngs.search_recordings(
     #    recording=song_query.get(), artistname=artist_query.get(), 
     #    release=album_query.get(), limit=100)
+    self.song_list.clear()
+    self.selected_artist = artist.text()
     song_result = musicbrainzngs.search_recordings(
-       artistname=artist.text(), 
+       artistname=self.selected_artist, 
          limit=100, strict=True)
     for song in song_result["recording-list"]:
         item = QListWidgetItem(song["title"])
         self.song_list.addItem(item)
+
+
+  def lyric_search(self, song_name):
+      self.lyrics.clear()
+      self.selected_song = song_name.text()
+      song = self.music_genius.search_song(self.selected_song, self.selected_artist)
+
+      self.lyrics.insertPlainText(song.lyrics)
+      self.lyrics_label.setText("Lyrics of {}".format(self.selected_song))
+
 
 def main():
     app = QApplication(sys.argv)
