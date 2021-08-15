@@ -12,7 +12,7 @@ import webbrowser
 import json
 import requests
 from requests.exceptions import ConnectionError
-
+import StyleSheet as styleSheet
 
 #MUSIC_GENIUS_ACCESS_TOKEN = "Xggm2iesVVTObjSTWDUIVfWoyGhftueOxOowgkCR5LKRyYS8Ml9K8oam4zBM3sR7"
 # Subclass QMainWindow to customize your application's main window
@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
                                     Qt.WindowMinimizeButtonHint |
                                     Qt.WindowMaximizeButtonHint)
      
+        self.setStyleSheet(styleSheet.SONG_LYRIC_ANALYSER_STYLE)
         self.mainLayout = QGridLayout()
         self.widget = QWidget()
         self.widget.setLayout(self.mainLayout)

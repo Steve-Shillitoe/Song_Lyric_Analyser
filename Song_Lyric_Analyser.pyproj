@@ -22,6 +22,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Song_Lyric_Analyser.py" />
+    <Compile Include="StyleSheet.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />
