@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
                 if song_result:
                     for song in song_result["recording-list"]:
                         song_title = song["title"]
-                        #remove text in [] and () from song title
+                        #remove [] and () and their enclosed text from song title
                         song_title = re.sub("[\(\[].*?[\)\]]", "", song_title)
                         song_title = song_title.strip().lower()
                         self.song_list.append(song_title)
@@ -212,11 +212,11 @@ class MainWindow(QMainWindow):
                 self.statusBar.showMessage("Lyrics found for {}".format(song_title))
                 if song.lyrics is not None:
                     self.list_song_word_count.append(self.word_count(song.lyrics))
-               # return song.lyrics
+                    return song.lyrics
             else:
+                return None
                 self.statusBar.showMessage("No lyrics found")
-                #return None
-
+                
         except Exception as e:
             print('Error in function lyric_search: ' + str(e))
 
@@ -259,24 +259,15 @@ class MainWindow(QMainWindow):
 
     def calculate_song_word_average(self):
         try:
-            QApplication.processEvents()
             self.statusBar.showMessage("Calculating the average number of words in a song by the {}".format(self.selected_artist))
-            self.progress.show()
-            self.progress.setMaximum(len(self.song_list))
-            self.statusBar.showMessage("Calculating the average number of words in a song by this artist")
-            #QApplication.setOverrideCursor(Qt.WaitCursor)
+            QApplication.processEvents()
+
             t1 = time.perf_counter()
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 executor.map(self.lyric_search, self.song_list)
-            #for count, song_title in enumerate(self.song_list):
-            #    QApplication.processEvents()
-            #    self.progress.setValue(count)
-             #lyrics = self.lyric_search(song_title)
-                
-            
             t2 = time.perf_counter()
-            #self.progress.reset()
-            self.statusBar.showMessage(f'Finished in {t2-t1} seconds')
+            
+            self.statusBar.showMessage(f'Calculation finished in {t2-t1} seconds')
             averageNumberWords = self.average(self.list_song_word_count)
             self.average_number_words_label.show()
             self.average_number_words_label.setText(
