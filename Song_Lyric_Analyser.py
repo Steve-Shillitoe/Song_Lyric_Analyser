@@ -278,8 +278,7 @@ class MainWindow(QMainWindow):
             QApplication.restoreOverrideCursor()
             print('Error in function calculate_song_word_average: ' + str(e))
 
-#with concurrent.futures.ThreadPoolExecutor() as executor:
- #   executor.map(download_image, img_urls)
+
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
