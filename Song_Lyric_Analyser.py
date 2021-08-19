@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import Qt, QObject, QRunnable, QThreadPool, pyqtSignal,pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, \
                         QPushButton,  QWidget, \
                         QGridLayout, QLabel, QLineEdit, QPushButton, \
@@ -12,13 +12,83 @@ import lyricsgenius
 import webbrowser
 import re
 import time
-import concurrent.futures
+#import concurrent.futures
 #import json
 #import requests
 #from requests.exceptions import ConnectionError
 import StyleSheet as styleSheet
 
+#constant
 MUSIC_GENIUS_ACCESS_TOKEN = "Xggm2iesVVTObjSTWDUIVfWoyGhftueOxOowgkCR5LKRyYS8Ml9K8oam4zBM3sR7"
+
+class WorkerSignals(QObject):
+  """Defines the signal, progress, available from a running worker thread
+  """
+  progress = pyqtSignal(int)
+  status = pyqtSignal(str)
+  wordCount = pyqtSignal(int)
+  finished = pyqtSignal(bool)
+  calculationTime = pyqtSignal(float)
+  
+
+class Worker(QRunnable):
+    """
+    This class inherits from QRunnable to handle worker thread setup, signals
+    and wrap-up in the calculation of the average number of words in a song by
+    a particular artist."""
+    def __init__(self, songs, artist):
+        super().__init__()
+        self.song_list = songs
+        self.artist = artist
+        self.signals = WorkerSignals()
+        self.setup_music_genius_lyric_finder() 
+    
+
+    def setup_music_genius_lyric_finder(self):
+        self.music_genius = lyricsgenius.Genius(MUSIC_GENIUS_ACCESS_TOKEN)
+        self.music_genius.remove_section_headers = True # Remove section headers (e.g. [Chorus]) from lyrics when searching
+        self.music_genius.skip_non_songs = True
+        self.music_genius.excluded_terms = ["(Remix)", "(Live)", "(remix)", 
+                                            "(live)", "edit", "(demo)" , "(mix)"]
+
+
+    def word_count(self, lyrics):
+        try:
+            if lyrics is not None:
+                word_list = lyrics.split()
+                return len(word_list)
+            else:
+                return 0
+        except Exception as e:
+            print('Error in function word_count when lyrics={}: '.format(lyrics) + str(e))
+
+
+    def get_number_words_in_one_song(self, song_title):
+        try:
+            #search for the song
+            song = self.music_genius.search_song(song_title, self.artist)
+            if song:
+                if song.lyrics is not None:
+                    return self.word_count(song.lyrics)
+            else:
+                return 0  
+        except Exception as e:
+            print('Error in function get_number_words_in_one_song: ' + str(e))    
+    
+
+    @pyqtSlot()
+    def run(self):
+        t1 = time.perf_counter()
+        for count, song_title in enumerate(self.song_list):
+            self.signals.status.emit(song_title)
+            number_words= self.get_number_words_in_one_song(song_title)
+            self.signals.wordCount.emit(number_words)
+            self.signals.progress.emit(count)
+        
+        t2 = time.perf_counter()
+        self.signals.calculationTime.emit(t2-t1)
+        self.signals.finished.emit(True)
+
 
 # Subclass QMainWindow to customize your application's main window  
 class MainWindow(QMainWindow):
@@ -28,19 +98,29 @@ class MainWindow(QMainWindow):
         musicbrainzngs.set_useragent(
         "Song_Lyric_Analyser", "1.0", contact="s.shillitoe1@ntlworld.com")
 
-        self.setup_music_genius_lyric_finder() 
+        self.threadpool = QThreadPool()
+        print(
+        "Multithreading with maximum %d threads" % self.
+            threadpool.maxThreadCount()
+        )
+
+        #self.setup_music_genius_lyric_finder() 
 
         self.selected_artist = ""
         self.song_list = []
         self.artist_list = []
         self.list_song_word_count = []
 
+        self.setUpUI()
+    
+
+    def setUpUI(self):
         self.setWindowTitle("Song Lyric Analyser")
         self.setWindowFlags(Qt.CustomizeWindowHint | 
                                     Qt.WindowCloseButtonHint | 
                                     Qt.WindowMinimizeButtonHint |
                                     Qt.WindowMaximizeButtonHint)
-     
+        
         self.setStyleSheet(styleSheet.SONG_LYRIC_ANALYSER_STYLE)
         self.mainLayout = QGridLayout()
         self.widget = QWidget()
@@ -49,17 +129,17 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.widget)
         self.setGeometry(0, 0, 600, 900)
         #self.showMaximized()
-
+        
         self.artist_label = QLabel("Artist")
         self.artist_name = QLineEdit()
         self.artist_name.textEdited.connect(self.enable_search_buttons)
         self.artist_name.textChanged.connect(self.set_artist_name)
-        self.artist_name.textChanged.connect(self.updateButtonText)
+        self.artist_name.textChanged.connect(self.update_button_text)
         self.artist_name.returnPressed.connect(self.get_song_list)
         self.artist_name.setToolTip("Enter the name of the artist")
         self.mainLayout.addWidget(self.artist_label, 0,0)
         self.mainLayout.addWidget(self.artist_name, 0,1)
-
+        
         self.song_list_search_button = QPushButton("Search for artist's song list")
         self.song_list_search_button.setToolTip("Search for artist's song list")
         self.song_list_search_button.setEnabled(False)
@@ -70,7 +150,7 @@ class MainWindow(QMainWindow):
         self.youtube_button.setEnabled(False)
         self.mainLayout.addWidget(self.song_list_search_button, 1,1)
         self.mainLayout.addWidget(self.youtube_button, 1,2)
-
+        
         self.song_list_widget = QListWidget()
         self.song_list_widget.sortItems(Qt.AscendingOrder)
         self.song_list_widget.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -79,8 +159,9 @@ class MainWindow(QMainWindow):
         
         self.mainLayout.addWidget(self.song_label, 2,1)
         self.mainLayout.addWidget(self.song_list_widget, 3,1)
-
+        
         self.lyrics = QPlainTextEdit()
+        self.lyrics.setReadOnly(True)
         scroll_bar = QScrollBar()
         self.lyrics.setVerticalScrollBar(scroll_bar)
         self.lyrics_label = QLabel("Lyrics")
@@ -93,23 +174,23 @@ class MainWindow(QMainWindow):
         self.average_number_words_label = QLabel("Average number of words in a song")
         self.average_number_words_label.hide()
         self.progress = QProgressBar()
-        self.progress.hide()
+        #self.progress.hide()
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
-
+        
         self.mainLayout.addWidget(self.lyrics_label, 4,1)
         self.mainLayout.addWidget(self.lyrics, 5,1)
         self.mainLayout.addWidget(self.number_words_label, 6,1)
         self.mainLayout.addWidget(self.average_button, 7,1)
         self.mainLayout.addWidget(self.average_number_words_label, 8,1)  
         self.mainLayout.addWidget(self.progress, 9,1)
-    
-    
+
+
     def set_artist_name(self):
         self.selected_artist = self.artist_name.text()
         
     
-    def updateButtonText(self):
+    def update_button_text(self):
         self.song_list_search_button.setText(
             "Search for {}'s song list".format(self.selected_artist))
         self.youtube_button.setText("Search for {} on YouTube".format(self.selected_artist))
@@ -131,18 +212,6 @@ class MainWindow(QMainWindow):
             self.song_list_search_button.setEnabled(True)
             self.youtube_button.setEnabled(True)
             
-
-
-    def setup_music_genius_lyric_finder(self):
-        self.music_genius = lyricsgenius.Genius(MUSIC_GENIUS_ACCESS_TOKEN)
-        self.music_genius.remove_section_headers = True # Remove section headers (e.g. [Chorus]) from lyrics when searching
-        self.music_genius.skip_non_songs = True
-        # Exclude songs with these words in their title
-        #This does not seem to work, so use a regular expression 
-        #at the point of need instead
-        self.music_genius.excluded_terms = ["(Remix)", "(Live)", "(remix)", 
-                                            "(live)", "edit", "(demo)"]
-
 
     def get_song_list(self):
         try:
@@ -205,17 +274,15 @@ class MainWindow(QMainWindow):
 
     def lyric_search(self, song_title):
         try:
-            QApplication.setOverrideCursor(Qt.WaitCursor)
             song = self.music_genius.search_song(song_title, self.selected_artist)
-            QApplication.restoreOverrideCursor()
             if song:
-                self.statusBar.showMessage("Lyrics found for {}".format(song_title))
+                #self.statusBar.showMessage("Lyrics found for {}".format(song_title))
                 if song.lyrics is not None:
                     self.list_song_word_count.append(self.word_count(song.lyrics))
                     return song.lyrics
             else:
                 return None
-                self.statusBar.showMessage("No lyrics found")
+                #self.statusBar.showMessage("No lyrics found")
                 
         except Exception as e:
             print('Error in function lyric_search: ' + str(e))
@@ -244,8 +311,11 @@ class MainWindow(QMainWindow):
 
     def word_count(self, lyrics):
         try:
-            word_list = lyrics.split()
-            return len(word_list)
+            if lyrics is not None:
+                word_list = lyrics.split()
+                return len(word_list)
+            else:
+                return 0
         except Exception as e:
             print('Error in function word_count when lyrics={}: '.format(lyrics) + str(e))
 
@@ -259,24 +329,59 @@ class MainWindow(QMainWindow):
 
     def calculate_song_word_average(self):
         try:
+            self.progress.setMaximum(len(self.song_list))
             self.statusBar.showMessage("Calculating the average number of words in a song by the {}".format(self.selected_artist))
             QApplication.processEvents()
 
-            t1 = time.perf_counter()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                executor.map(self.lyric_search, self.song_list)
-            t2 = time.perf_counter()
+            #This is a quicker way to multithread to calculate 
+            #number of words in a song but it does not allow 
+            #communication with the user about calculation 
+            #progress via the progress bar
+            #with concurrent.futures.ThreadPoolExecutor() as executor:
+            #     executor.map(self.lyric_search, self.song_list)
+
+            worker = Worker(self.song_list, self.selected_artist)
+            worker.signals.progress.connect(self.update_progress)
+            worker.signals.status.connect(self.update_status_bar)
+            worker.signals.wordCount.connect(self.update_song_word_list)
+            worker.signals.finished.connect(self.reset_progress_bar)
+            worker.signals.finished.connect(self.calculate_average_number_words_in_a_song)
+            worker.signals.calculationTime.connect(self.finalise_status_bar)
+
+            # Execute
+            self.threadpool.start(worker)
+        except Exception as e:
+            print('Error in function calculate_song_word_average: ' + str(e))
+
+
+    def update_progress(self, progress):
+        self.progress.setValue(progress)
+
+
+    def update_status_bar(self, song_title):
+        self.statusBar.showMessage("Processing a song called {}".format(song_title))
+
+
+    def update_song_word_list(self, word_count): 
+        self.list_song_word_count.append(word_count)
+
+
+    def reset_progress_bar(self, finished):
+        if finished:
+            self.progress.reset()
             
-            self.statusBar.showMessage(f'Calculation finished in {t2-t1} seconds')
+
+    def finalise_status_bar(self, calculationTime):
+        self.statusBar.showMessage("Calculation time = {}".format(calculationTime))
+
+
+    def calculate_average_number_words_in_a_song(self, finished):
+        if finished:
             averageNumberWords = self.average(self.list_song_word_count)
             self.average_number_words_label.show()
             self.average_number_words_label.setText(
                 "The average number of words in a song by {} is {}".format(self.selected_artist, 
                                                                             averageNumberWords))
-        except Exception as e:
-            print(list_song_word_count)
-            QApplication.restoreOverrideCursor()
-            print('Error in function calculate_song_word_average: ' + str(e))
 
 
 def main():
