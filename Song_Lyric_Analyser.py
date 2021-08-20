@@ -123,6 +123,7 @@ class MainWindow(QMainWindow):
 
     
     def update_button_text(self):
+        """Updates button text with the artist's name as the user types the artist's name"""
         try:
             self.song_list_search_button.setText(
                 "Search for {}'s song list".format(self.selected_artist))
@@ -133,6 +134,7 @@ class MainWindow(QMainWindow):
 
 
     def find_artist_on_YouTube(self):
+        """Opens a browser showing youtube search results for the artist"""
         try:
             search_url = "https://www.youtube.com/results?search_query=" + self.selected_artist
             webbrowser.open(search_url)
@@ -141,6 +143,7 @@ class MainWindow(QMainWindow):
 
 
     def enable_search_buttons(self):
+        """Enables search buttons when the user enters an artist's name"""
         try:
             if len(self.artist_name.text()) == 0:
                 self.song_list_search_button.setEnabled(False)
@@ -185,6 +188,7 @@ class MainWindow(QMainWindow):
                     for song in song_result["recording-list"]:
                         song_title = song["title"]
                         #remove [] and () and their enclosed text from song title
+                        #using a regular expression
                         song_title = re.sub("[\(\[].*?[\)\]]", "", song_title)
                         song_title = song_title.strip().lower()
                         self.song_list.append(song_title)
@@ -231,6 +235,7 @@ class MainWindow(QMainWindow):
     
 
     def calculate_list_average(self, listOfNumbers):
+        """Calculates the average value of a list of numbers"""
         try:
             if listOfNumbers is not None:
                 return int(sum(listOfNumbers) / len(listOfNumbers))
@@ -241,6 +246,10 @@ class MainWindow(QMainWindow):
 
 
     def calculate_song_word_average(self):
+        """This function uses multithreading to calculate the average number of words in an artist's song.
+        Multithreading prevents the appearance of the application freezing by updating a 
+        progress bar as the artist's song list is iterated over, the number of words in
+        each song is determined and appended to a list. The average is calculated from this list."""
         try:
             self.progress.setMaximum(len(self.song_list))
             self.statusBar.showMessage("Calculating the average number of words in a song by the {}".format(self.selected_artist))
@@ -254,10 +263,14 @@ class MainWindow(QMainWindow):
             #     executor.map(self.lyric_search, self.song_list)
 
             lyricFinder = LyricFinder(self.song_list, self.selected_artist)
-            lyricFinder.signals.progress.connect(self.update_progress)
+            lyricFinder.signals.progress.connect(self.update_progress_bar)
+            #show the user which song is being processed
             lyricFinder.signals.status.connect(self.update_status_bar)
+            #add the number of words in each song to the list
             lyricFinder.signals.wordCount.connect(self.update_song_word_list)
+            #calculation finished, so reset the progress bar
             lyricFinder.signals.finished.connect(self.reset_progress_bar)
+            #calculation finished, so calculate the average number of words in an artist's song
             lyricFinder.signals.finished.connect(self.calculate_average_number_words_in_a_song)
             lyricFinder.signals.calculationTime.connect(self.finalise_status_bar)
 
@@ -266,12 +279,12 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.calculate_song_word_average: ' + str(e))
 
-
-    def update_progress(self, progress):
+            
+    def update_progress_bar(self, song_number):
         try:
-            self.progress.setValue(progress)
+            self.progress.setValue(song_number)
         except Exception as e:
-            print('Error in function Song_Lyric_Analyser.update_progress: ' + str(e))
+            print('Error in function Song_Lyric_Analyser.update_progress_bar: ' + str(e))
 
 
     def update_status_bar(self, song_title):
@@ -282,6 +295,7 @@ class MainWindow(QMainWindow):
 
 
     def update_song_word_list(self, word_count):
+        """word_count - Number of words in a song"""
         try:
             self.list_song_word_count.append(word_count)
         except Exception as e:

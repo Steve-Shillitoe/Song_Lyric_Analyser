@@ -1,7 +1,7 @@
 import time
 import lyricsgenius
 from PyQt5.QtCore import Qt, QObject, QRunnable, pyqtSignal, pyqtSlot
-#constants
+#constant
 MUSIC_GENIUS_ACCESS_TOKEN = "Xggm2iesVVTObjSTWDUIVfWoyGhftueOxOowgkCR5LKRyYS8Ml9K8oam4zBM3sR7"
 
 class LyricFinderSignals(QObject):
@@ -42,6 +42,7 @@ class LyricFinder(QRunnable):
 
 
     def word_count(self, lyrics):
+        """Returns the number of words in a song."""
         try:
             if lyrics is not None:
                 word_list = lyrics.split()
@@ -67,6 +68,7 @@ class LyricFinder(QRunnable):
 
     @pyqtSlot()
     def run(self):
+        """Reimplementation of the run() virtual function"""
         try:
             start_time = time.perf_counter()
             for count, song_title in enumerate(self.song_list):
