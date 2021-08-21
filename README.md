@@ -24,9 +24,12 @@ In order to do this you will need to install the following packages:
     MusicBrainzngs
    
 on Windows you may use PIP install; e.g.,
-    pip install pyqt5 \n
-    pip install lyricsgenius \n
-    pip install musicbrainzngs\n
+    pip install pyqt5 
+    
+    pip install lyricsgenius
+    
+    pip install musicbrainzngs
+    
     
 # Running the application
 The start-up file for this application is 
