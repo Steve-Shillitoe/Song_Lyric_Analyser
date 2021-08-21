@@ -1,11 +1,21 @@
+"""
+This class module handles the retrieval of song lyrics and counting the number of words
+they contain using multithreading.  The LyricsGenius API, https://pypi.org/project/lyricsgenius/
+is used to retrieve the song lyrics for an artist/song title pair.
+"""
+
 import time
+#LyricsGenius: a Python client for the Genius.com API
 import lyricsgenius
+#import PyQt5 multithreading support
 from PyQt5.QtCore import Qt, QObject, QRunnable, pyqtSignal, pyqtSlot
 #constant
-MUSIC_GENIUS_ACCESS_TOKEN = "Xggm2iesVVTObjSTWDUIVfWoyGhftueOxOowgkCR5LKRyYS8Ml9K8oam4zBM3sR7"
+LYRICS_GENIUS_ACCESS_TOKEN = "Xggm2iesVVTObjSTWDUIVfWoyGhftueOxOowgkCR5LKRyYS8Ml9K8oam4zBM3sR7"
 
 class LyricFinderSignals(QObject):
-  """Defines the signals available from a running LyricFinder thread
+  """Defines the signals available from a running LyricFinder thread that
+  allow the threads running the song lyric searches to communicate with the 
+  main thread running the application GUI.
   """
   progress = pyqtSignal(int)
   status = pyqtSignal(str)
@@ -20,6 +30,12 @@ class LyricFinder(QRunnable):
     and wrap-up in the calculation of the average number of words in a song by
     a particular artist."""
     def __init__(self, songs, artist):
+        """
+        Input parameters:
+        *****************
+        songs - a list of song titles
+        artist - the name of artist whose songs are the above song list.
+        """
         try:
             super().__init__()
             self.song_list = songs
@@ -32,7 +48,7 @@ class LyricFinder(QRunnable):
 
     def setup_music_genius_lyric_finder(self):
         try:
-            self.music_genius = lyricsgenius.Genius(MUSIC_GENIUS_ACCESS_TOKEN)
+            self.music_genius = lyricsgenius.Genius(LYRICS_GENIUS_ACCESS_TOKEN)
             self.music_genius.remove_section_headers = True # Remove section headers (e.g. [Chorus]) from lyrics when searching
             self.music_genius.skip_non_songs = True
             self.music_genius.excluded_terms = ["(Remix)", "(Live)", "(remix)", 

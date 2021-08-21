@@ -1,3 +1,18 @@
+"""
+Song Lyric Analyser is a desk top application that allows the user to 
+calculate the average number of words in a song by a particular artist.
+
+This class module uses PyQt5 to create the GUI for the Song Lyric Analyser
+application.  After the user inputs the name of an artist, it uses 
+the MusicBrainzngs API to retrieve the song list for that artist. It then
+uses the LyricsGenius API to retrieve the lyrics for each song in the 
+song list.  The number of words in each song is counted and used to 
+calculate the word average for a song by the artist.
+
+After entering the name of the artist, the user may search for videos of 
+them on YouTube.
+
+This is the start-up file for this application. """
 import sys
 from PyQt5.QtCore import Qt, QThreadPool
 from PyQt5.QtWidgets import QApplication, QMainWindow, \
@@ -27,29 +42,32 @@ INSTRUCTIONS = "To find the average number of words in an artist's song, first e
             " to get the artist's song list. \nFinally click the 'Calculate average number of words in a song by this artist'" + \
             " button to calculate the average number of words in a song"
 
-# Subclass QMainWindow to customize your application's main window  
+
 class MainWindow(QMainWindow):
+    """This class subclasses PyQt's QMainWindow to create the application's main window"""
     def __init__(self):
         try:
             super().__init__()
-            # Initialize user agent to DB
+            # Each request sent to MusicBrainz needs to include a User-Agent header
             musicbrainzngs.set_useragent(
             "Song_Lyric_Analyser", "1.0", contact="s.shillitoe1@ntlworld.com")
 
+            #Set up thread pool
             self.threadpool = QThreadPool()
             print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
-            self.selected_artist = ""
+            self.artist_name = ""
             self.song_list = []
-            self.artist_list = []
             self.list_song_word_count = []
 
             self.setUpUI()
+            self.connectSignalsToSlots()
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.__init__: ' + str(e))
 
 
     def setUpUI(self):
+        """This function creates the GUI using PyQt5"""
         try:
             self.setWindowTitle("Song Lyric Analyser")
             self.setWindowFlags(Qt.CustomizeWindowHint | 
@@ -69,23 +87,19 @@ class MainWindow(QMainWindow):
             self.instructionsLabel = QLabel(INSTRUCTIONS)
             self.instructionsLabel.setWordWrap(True)
             self.artist_label = QLabel("Type the name of an artist below.")
-            self.artist_name = QLineEdit()
-            self.artist_name.textEdited.connect(self.enable_search_buttons)
-            self.artist_name.textChanged.connect(self.set_artist_name)
-            self.artist_name.textChanged.connect(self.update_button_text)
-            self.artist_name.returnPressed.connect(self.get_song_list)
-            self.artist_name.setToolTip("Type the name of the artist")
+            self.artist_name_widget = QLineEdit()
+            self.artist_name_widget.setToolTip("Type the name of the artist")
             self.mainLayout.addWidget(self.instructionsLabel)
             self.mainLayout.addWidget(self.artist_label)
-            self.mainLayout.addWidget(self.artist_name)
+            self.mainLayout.addWidget(self.artist_name_widget)
         
             self.song_list_search_button = QPushButton("Search for artist's song list")
             self.song_list_search_button.setToolTip("Search for artist's song list")
             self.song_list_search_button.setEnabled(False)
-            self.song_list_search_button.clicked.connect(self.get_song_list)
+           
             self.youtube_button = QPushButton("Search for artist on YouTube")
             self.youtube_button.setToolTip("Search for the artist on YouTube")
-            self.youtube_button.clicked.connect(self.find_artist_on_YouTube)
+            
             self.youtube_button.setEnabled(False)
             self.horizontalLayout = QHBoxLayout()
             self.horizontalLayout.addWidget(self.song_list_search_button)
@@ -100,7 +114,7 @@ class MainWindow(QMainWindow):
             self.mainLayout.addWidget(self.song_list_widget)
         
             self.average_button = QPushButton("Calculate average number of words in a song by this artist")
-            self.average_button.clicked.connect(self.calculate_song_word_average)
+            
             self.average_button.setEnabled(False)
             self.average_button.setToolTip("Calculates the average number of words in the artists songs")
             self.average_number_words_label = QLabel("Average number of words in a song")
@@ -115,9 +129,19 @@ class MainWindow(QMainWindow):
             print('Error in function Song_Lyric_Analyser.setUpUI: ' + str(e))
 
 
+    def connectSignalsToSlots(self):
+        self.artist_name_widget.textEdited.connect(self.enable_search_buttons)
+        self.artist_name_widget.textChanged.connect(self.set_artist_name)
+        self.artist_name_widget.textChanged.connect(self.update_button_text)
+        self.artist_name_widget.returnPressed.connect(self.get_song_list)
+        self.song_list_search_button.clicked.connect(self.get_song_list)
+        self.youtube_button.clicked.connect(self.find_artist_on_YouTube)
+        self.average_button.clicked.connect(self.calculate_song_word_average)
+
+
     def set_artist_name(self):
         try:
-            self.selected_artist = self.artist_name.text()
+            self.artist_name = self.artist_name_widget.text()
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.set_artist_name: ' + str(e))
 
@@ -126,9 +150,9 @@ class MainWindow(QMainWindow):
         """Updates button text with the artist's name as the user types the artist's name"""
         try:
             self.song_list_search_button.setText(
-                "Search for {}'s song list".format(self.selected_artist))
-            self.youtube_button.setText("Search for {} on YouTube".format(self.selected_artist))
-            self.average_button.setText("Calculate the average number of words in a song by {}".format(self.selected_artist))
+                "Search for {}'s song list".format(self.artist_name))
+            self.youtube_button.setText("Search for {} on YouTube".format(self.artist_name))
+            self.average_button.setText("Calculate the average number of words in a song by {}".format(self.artist_name))
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.update_button_text: ' + str(e))
 
@@ -136,7 +160,7 @@ class MainWindow(QMainWindow):
     def find_artist_on_YouTube(self):
         """Opens a browser showing youtube search results for the artist"""
         try:
-            search_url = "https://www.youtube.com/results?search_query=" + self.selected_artist
+            search_url = "https://www.youtube.com/results?search_query=" + self.artist_name
             webbrowser.open(search_url)
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.find_artist_on_YouTube: ' + str(e))
@@ -145,7 +169,7 @@ class MainWindow(QMainWindow):
     def enable_search_buttons(self):
         """Enables search buttons when the user enters an artist's name"""
         try:
-            if len(self.artist_name.text()) == 0:
+            if len(self.artist_name_widget.text()) == 0:
                 self.song_list_search_button.setEnabled(False)
                 self.youtube_button.setEnabled(False)
                 self.average_button.setEnabled(False)
@@ -166,7 +190,7 @@ class MainWindow(QMainWindow):
                 item = QListWidgetItem(song)
                 self.song_list_widget.addItem(item)
             self.song_label.setText("{} have {} song titles".format(
-                            self.selected_artist, len(self.song_list)))
+                            self.artist_name, len(self.song_list)))
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.build_song_list_widget: ' + str(e))
             
@@ -181,12 +205,13 @@ class MainWindow(QMainWindow):
             QApplication.setOverrideCursor(Qt.WaitCursor)
             while True:
                 song_result = musicbrainzngs.search_recordings(
-                    artistname=self.selected_artist, 
+                    artistname=self.artist_name, 
                     limit=limit, offset=offset, strict=True)
             
                 if song_result:
                     for song in song_result["recording-list"]:
                         song_title = song["title"]
+                        #use a regular expression to 'clean up' the song titles
                         #remove [] and () and their enclosed text from song title
                         #using a regular expression
                         song_title = re.sub("[\(\[].*?[\)\]]", "", song_title)
@@ -203,7 +228,7 @@ class MainWindow(QMainWindow):
 
             if len(self.song_list) == 0:
                 self.song_label.setText("No song titles found for {}".format(
-                                self.selected_artist))
+                                self.artist_name))
                 self.statusBar.showMessage("No song titles found")
             else:
                 self.average_button.setEnabled(True)
@@ -218,7 +243,7 @@ class MainWindow(QMainWindow):
        'https://api.lyrics.ovh/v1/' is unavailable"""
         try:
             url = 'https://api.lyrics.ovh/v1/' 
-            url_query = url + self.selected_artist + '/' + song_title
+            url_query = url + self.artist_name + '/' + song_title
             response = requests.get(url_query)
             lyrics = ""
             if response.status_code == 200:
@@ -252,7 +277,7 @@ class MainWindow(QMainWindow):
         each song is determined and appended to a list. The average is calculated from this list."""
         try:
             self.progress.setMaximum(len(self.song_list))
-            self.statusBar.showMessage("Calculating the average number of words in a song by the {}".format(self.selected_artist))
+            self.statusBar.showMessage("Calculating the average number of words in a song by the {}".format(self.artist_name))
             QApplication.processEvents()
 
             #This is a quicker way to calculate 
@@ -262,7 +287,7 @@ class MainWindow(QMainWindow):
             #with concurrent.futures.ThreadPoolExecutor() as executor:
             #     executor.map(self.lyric_search, self.song_list)
 
-            lyricFinder = LyricFinder(self.song_list, self.selected_artist)
+            lyricFinder = LyricFinder(self.song_list, self.artist_name)
             lyricFinder.signals.progress.connect(self.update_progress_bar)
             #show the user which song is being processed
             lyricFinder.signals.status.connect(self.update_status_bar)
@@ -323,7 +348,7 @@ class MainWindow(QMainWindow):
                 averageNumberWords = self.calculate_list_average(self.list_song_word_count)
                 self.average_number_words_label.show()
                 self.average_number_words_label.setText(
-                    "The average number of words in a song by {} is {}".format(self.selected_artist, 
+                    "The average number of words in a song by {} is {}".format(self.artist_name, 
                                                                             averageNumberWords))
         except Exception as e:
             print('Error in function Song_Lyric_Analyser.calculate_average_number_words_in_a_song: ' + str(e))
