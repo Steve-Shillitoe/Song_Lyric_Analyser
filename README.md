@@ -44,4 +44,7 @@ The files Song_Lyric_Analyser.sln and Song_Lyric_Analyser.pyproj are only
 needed if you wish to view the source code in MS Visual Studio.
 Otherwise they can be ignored or even deleted with no deleterious side-effects!
 
-
+# Unit Testing
+testLyricFinder.py and testSong_Lyric_Analyser.py contain unit tests for function that perform
+simple arithmetic.  A suggestion for future work would be to develop unit tests using pytest-qt,
+which enables the simulation of key presses and mouse clicks to test the GUI.
