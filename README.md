@@ -10,7 +10,10 @@ uses the LyricsGenius API to retrieve the lyrics for each song in the
 song list using multithreading.  The number of words in each song is counted and used to 
 calculate the word average for a song by the artist.
 
-After entering the name of the artist, the user may search for videos of 
+Instructions on how to use this application are displayed at the top of the
+start-up screen. 
+
+After entering the name of the artist, the user may also search for videos of 
 them on YouTube.
 
 # Installation.
@@ -26,10 +29,10 @@ on Windows you may use PIP install; e.g.,
     pip install musicbrainzngs
     
 # Running the application
-The is the start-up file for this application is 
+The start-up file for this application is 
     Song_Lyric_Analyser.py
     
-The Song_Lyric_Analyser.sln and Song_Lyric_Analyser.pyproj are only
+The files Song_Lyric_Analyser.sln and Song_Lyric_Analyser.pyproj are only
 needed if you wish to view the source code in MS Visual Studio.
 Otherwise they can be ignored or even deleted with no deleterious side-effects!
 
