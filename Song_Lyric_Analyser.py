@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
             print('Error in function redundant_lyric_search: ' + str(e))
     
 
-    def calculate_list_average(self, listOfNumbers):
+    def calculate_list_average(self, listOfNumbers=None):
         """Calculates the average value of a list of numbers"""
         try:
             if listOfNumbers is not None:

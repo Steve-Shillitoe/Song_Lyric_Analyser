@@ -41,7 +41,7 @@ class LyricFinder(QRunnable):
             print('Error in function LyricFinder.setup_music_genius_lyric_finder: '.format(lyrics) + str(e))
 
 
-    def word_count(self, lyrics):
+    def word_count(self, lyrics=None):
         """Returns the number of words in a song."""
         try:
             if lyrics is not None:

@@ -29,6 +29,12 @@
     </Compile>
     <Compile Include="Song_Lyric_Analyser.py" />
     <Compile Include="StyleSheet.py" />
+    <Compile Include="testLyricFinder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="testSong_Lyric_Analyser.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />
