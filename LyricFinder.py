@@ -79,7 +79,7 @@ class LyricFinder(QRunnable):
             else:
                 return 0  
         except Exception as e:
-            print('Error in function LyricFinder.get_number_words_in_one_song: ' + str(e))    
+            print('Error in function LyricFinder.get_number_words_in_one_song with song title {}: '.format(song_title) + str(e))    
     
 
     @pyqtSlot()
