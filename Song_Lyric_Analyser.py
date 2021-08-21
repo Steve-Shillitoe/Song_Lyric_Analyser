@@ -4,7 +4,8 @@ calculate the average number of words in a song by a particular artist.
 
 This class module uses PyQt5 to create the GUI for the Song Lyric Analyser
 application.  After the user inputs the name of an artist, it uses 
-the MusicBrainzngs API to retrieve the song list for that artist. It then
+the MusicBrainzngs API (https://pypi.org/project/musicbrainzngs/)
+to retrieve the song list for that artist. It then
 uses the LyricsGenius API to retrieve the lyrics for each song in the 
 song list.  The number of words in each song is counted and used to 
 calculate the word average for a song by the artist.
