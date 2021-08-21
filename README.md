@@ -24,6 +24,7 @@ In order to do this you will need to install the following packages:
     MusicBrainzngs
    
 on Windows you may use PIP install; e.g.,
+    
     pip install pyqt5 
     
     pip install lyricsgenius
