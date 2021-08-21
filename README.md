@@ -19,9 +19,13 @@ them on YouTube.
 # Installation.
 You may run this application in your favourite Python development environment.
 In order to do this you will need to install the following packages:
+
     PyQt5
+    
     LyricsGenius
+    
     MusicBrainzngs
+    
    
 on Windows you may use PIP install; e.g.,
     
